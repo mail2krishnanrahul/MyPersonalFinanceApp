@@ -36,7 +36,7 @@
       - list [ref=e53]:
         - listitem [ref=e54]:
           - generic [ref=e55]:
-            - generic [ref=e56]: testuser1770551653371@example.com
+            - generic [ref=e56]: testuser1770585312665@example.com
             - button "Logout" [ref=e57]
       - button "Toggle Sidebar" [ref=e58]
     - main [ref=e59]:
@@ -44,16 +44,16 @@
         - button "Toggle Sidebar" [ref=e62]:
           - img
           - generic [ref=e63]: Toggle Sidebar
-        - button "Jan 09, 2026 - Feb 08, 2026" [ref=e65]:
+        - button "Jan 10, 2026 - Feb 09, 2026" [ref=e65]:
           - img
-          - text: Jan 09, 2026 - Feb 08, 2026
+          - text: Jan 10, 2026 - Feb 09, 2026
       - main [ref=e66]:
         - generic [ref=e67]:
           - generic [ref=e68]:
             - heading "Dashboard" [level=1] [ref=e69]
             - paragraph [ref=e70]:
               - text: Your financial overview
-              - generic [ref=e71]: (Jan 9, 2026 - Feb 8, 2026)
+              - generic [ref=e71]: (Jan 10, 2026 - Feb 9, 2026)
           - generic [ref=e72]:
             - generic [ref=e73]:
               - heading "Total Balance" [level=3] [ref=e74]

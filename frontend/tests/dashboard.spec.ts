@@ -24,6 +24,12 @@ test.describe('Dashboard Page', () => {
     })
 
     test('displays burn rate chart section', async ({ page }) => {
+        // Wait for burn rate API to complete
+        await page.waitForResponse(response =>
+            response.url().includes('/api/analytics/burn-rate') && response.status() === 200,
+            { timeout: 10000 }
+        ).catch(() => { });
+
         await page.waitForTimeout(2000)
 
         // Check for burn rate chart presence
@@ -52,7 +58,10 @@ test.describe('Dashboard Page', () => {
     })
 
     test('dashboard handles API errors gracefully', async ({ page, context }) => {
-        // Block the API to simulate error
+        // Login first
+        await loginTestUser(page);
+
+        // Then block the API to simulate error  
         await context.route('**/api/transactions**', route => {
             route.fulfill({
                 status: 500,
