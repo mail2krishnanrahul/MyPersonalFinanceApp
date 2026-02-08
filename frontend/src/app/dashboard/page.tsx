@@ -81,9 +81,12 @@ export default function DashboardPage() {
         savings
       })
 
-      // Fetch burn rate data
+      // Fetch burn rate data with date range
       try {
-        const burnRateResponse = await fetch('/api/analytics/burn-rate')
+        const burnRateUrl = dateRange?.from && dateRange?.to
+          ? `/api/analytics/burn-rate?startDate=${format(dateRange.from, 'yyyy-MM-dd')}&endDate=${format(dateRange.to, 'yyyy-MM-dd')}`
+          : '/api/analytics/burn-rate'
+        const burnRateResponse = await fetch(burnRateUrl)
         if (burnRateResponse.ok) {
           const burnRateApiData = await burnRateResponse.json()
 
