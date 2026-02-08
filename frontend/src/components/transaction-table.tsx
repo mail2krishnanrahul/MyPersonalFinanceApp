@@ -54,7 +54,7 @@ export interface Transaction {
     category: string | null
     amount: number
     transactionDate: string
-    status: "Raw" | "Cleaned" | "Flagged"
+    status: "PENDING" | "REVIEWED" | "COMPLETED" | "Raw" | "Cleaned" | "Flagged"
 }
 
 // Paginated response from backend
@@ -93,12 +93,16 @@ function getCategoryIcon(category: string | null): React.ElementType {
 function getStatusBadge(status: string) {
     switch (status) {
         case "Cleaned":
-            return <Badge className="bg-green-500 hover:bg-green-600">Cleaned</Badge>
+        case "COMPLETED":
+            return <Badge className="bg-green-500 hover:bg-green-600">{status}</Badge>
         case "Flagged":
-            return <Badge className="bg-amber-500 hover:bg-amber-600">Flagged</Badge>
+        case "PENDING":
+            return <Badge className="bg-amber-500 hover:bg-amber-600">{status}</Badge>
+        case "REVIEWED":
+            return <Badge className="bg-blue-500 hover:bg-blue-600">Reviewed</Badge>
         case "Raw":
         default:
-            return <Badge className="bg-red-500 hover:bg-red-600">Raw</Badge>
+            return <Badge className="bg-red-500 hover:bg-red-600">{status || "Raw"}</Badge>
     }
 }
 

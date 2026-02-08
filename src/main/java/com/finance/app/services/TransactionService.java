@@ -61,7 +61,7 @@ public class TransactionService {
                 .category(transaction.getCategory())
                 .amount(transaction.getAmount())
                 .transactionDate(transaction.getTransactionDate())
-                .status(determineStatus(transaction))
+                .status(transaction.getStatus() != null ? transaction.getStatus() : determineStatus(transaction))
                 .build();
     }
 

@@ -45,6 +45,9 @@ public class Transaction {
     @Column(name = "transaction_date", nullable = false)
     private LocalDateTime transactionDate;
 
+    @Column(name = "status", length = 20)
+    private String status = "PENDING"; // PENDING, REVIEWED, COMPLETED
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

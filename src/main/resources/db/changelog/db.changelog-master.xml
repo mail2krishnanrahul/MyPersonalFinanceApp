@@ -8,4 +8,7 @@
     <!-- Initial schema setup -->
     <include file="db/changelog/20260208-1743-create-finance-tables.sql" relativeToChangelogFile="false"/>
 
+    <!-- Add status column to transactions -->
+    <include file="db/changelog/20260208-2138-add-transaction-status.sql" relativeToChangelogFile="false"/>
+
 </databaseChangeLog>
