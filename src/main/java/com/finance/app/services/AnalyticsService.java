@@ -1,7 +1,11 @@
 package com.finance.app.services;
 
 import com.finance.app.dto.BurnRateDTO;
+import com.finance.app.models.User;
 import com.finance.app.repositories.TransactionRepository;
+import com.finance.app.repositories.UserRepository;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,15 +24,17 @@ import java.util.List;
 public class AnalyticsService {
 
     private final TransactionRepository transactionRepository;
+    private final UserRepository userRepository;
     private static final DateTimeFormatter MONTH_FORMATTER = DateTimeFormatter.ofPattern("MMM yyyy");
 
-    public AnalyticsService(TransactionRepository transactionRepository) {
+    public AnalyticsService(TransactionRepository transactionRepository, UserRepository userRepository) {
         this.transactionRepository = transactionRepository;
+        this.userRepository = userRepository;
     }
 
     /**
      * Calculate burn rate (spending velocity) for months within the given date
-     * range.
+     * range for the authenticated user.
      * Shows up to 4 months of data ending at the endDate month.
      *
      * @param startDate the start of the date range (optional, defaults to 4 months
@@ -39,6 +45,11 @@ public class AnalyticsService {
      */
     @Transactional(readOnly = true)
     public List<BurnRateDTO> calculateBurnRate(LocalDate startDate, LocalDate endDate) {
+        // Get authenticated user
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + email));
+
         // Default to current date if not provided
         LocalDate effectiveEndDate = endDate != null ? endDate : LocalDate.now();
         YearMonth endMonth = YearMonth.from(effectiveEndDate);
@@ -62,9 +73,9 @@ public class AnalyticsService {
             LocalDateTime startOfMonth = month.atDay(1).atStartOfDay();
             LocalDateTime endOfMonth = month.atEndOfMonth().atTime(23, 59, 59);
 
-            // Sum all negative amounts (expenses) for this month
+            // Sum all negative amounts (expenses) for this month FOR THE AUTHENTICATED USER
             BigDecimal totalSpent = transactionRepository
-                    .findByTransactionDateBetween(startOfMonth, endOfMonth)
+                    .findByAccount_User_IdAndTransactionDateBetween(user.getId(), startOfMonth, endOfMonth)
                     .stream()
                     .filter(t -> t.getAmount() != null && t.getAmount().compareTo(BigDecimal.ZERO) < 0)
                     .map(t -> t.getAmount().abs())

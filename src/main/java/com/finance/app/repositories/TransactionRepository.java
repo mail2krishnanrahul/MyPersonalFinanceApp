@@ -60,4 +60,15 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
      */
     List<Transaction> findByAccountIdAndTransactionDateBetween(
             UUID accountId, LocalDateTime startDate, LocalDateTime endDate);
+
+    /**
+     * Find transactions for a user within a date range.
+     *
+     * @param userId    the user UUID
+     * @param startDate start of the date range
+     * @param endDate   end of the date range
+     * @return list of transactions
+     */
+    List<Transaction> findByAccount_User_IdAndTransactionDateBetween(
+            UUID userId, LocalDateTime startDate, LocalDateTime endDate);
 }
