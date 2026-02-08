@@ -90,35 +90,14 @@ export default function DashboardPage() {
         if (burnRateResponse.ok) {
           const burnRateApiData = await burnRateResponse.json()
 
-          // Transform API data to chart format
-          const previousMonths: MonthlySpendingData[] = burnRateApiData
-            .filter((item: any) => !item.currentMonth)
-            .map((item: any) => ({
-              month: item.monthName.split(' ')[0], // Get month abbreviation
-              totalSpending: Number(item.totalSpent) || 0,
-              isCurrentMonth: false
-            }))
+          // Transform API data to chart format - simple mapping for all months
+          const chartData: MonthlySpendingData[] = burnRateApiData.map((item: any) => ({
+            month: item.monthName.split(' ')[0], // Get month abbreviation (e.g., "Nov" from "Nov 2025")
+            totalSpending: Number(item.totalSpent) || 0,
+            isCurrentMonth: item.currentMonth || false
+          }))
 
-          // Get current month data
-          const currentMonthItem = burnRateApiData.find((item: any) => item.currentMonth)
-
-          if (currentMonthItem) {
-            const currentTotal = Number(currentMonthItem.totalSpent) || 0
-            const today = new Date()
-            const dayOfMonth = today.getDate()
-            const monthAbbr = format(today, 'MMM')
-
-            // Create cumulative points for current month
-            const cumulativePoints: MonthlySpendingData[] = [
-              { month: `${monthAbbr} 1`, totalSpending: 0, cumulativeSpending: Math.round(currentTotal * 0.15), isCurrentMonth: true, day: 1 },
-              { month: `${monthAbbr} ${Math.round(dayOfMonth / 2)}`, totalSpending: 0, cumulativeSpending: Math.round(currentTotal * 0.5), isCurrentMonth: true, day: Math.round(dayOfMonth / 2) },
-              { month: `${monthAbbr} ${dayOfMonth}`, totalSpending: 0, cumulativeSpending: currentTotal, isCurrentMonth: true, day: dayOfMonth },
-            ]
-
-            setBurnRateData([...previousMonths, ...cumulativePoints])
-          } else {
-            setBurnRateData(previousMonths)
-          }
+          setBurnRateData(chartData)
         }
       } catch (burnRateError) {
         console.error('Burn rate fetch error:', burnRateError)

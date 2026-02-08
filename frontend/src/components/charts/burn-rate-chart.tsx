@@ -56,15 +56,18 @@ function CustomTooltip({
         return null
     }
 
-    const data = payload[0]?.payload as MonthlySpendingData & { percentageDiff?: number }
+    const data = payload[0]?.payload as MonthlySpendingData & { percentageDiff?: number; trendValue?: number }
 
     return (
         <div className="bg-slate-800 border border-slate-600 rounded-lg p-3 shadow-xl">
             <p className="text-white font-semibold mb-2">{label}</p>
             {payload.map((entry, index) => {
                 const typedEntry = entry as unknown as CustomTooltipPayload
-                const color = typedEntry.dataKey === "totalSpending" ? COLORS.blue : COLORS.gold
-                const displayLabel = entry.dataKey === "totalSpending" ? "Monthly Spending" : "Burn Rate"
+                const isBar = typedEntry.dataKey === "barSpending" || typedEntry.dataKey === "totalSpending"
+                const color = isBar ? COLORS.blue : COLORS.gold
+                const displayLabel = isBar ? "Burn Rate" : "Trend"
+
+                if (typedEntry.value === undefined || typedEntry.value === null) return null
 
                 return (
                     <div key={index} className="flex items-center gap-2 text-sm">
@@ -85,7 +88,7 @@ function CustomTooltip({
                     <span className={`text-sm font-medium ${data.percentageDiff > 0 ? "text-red-400" : "text-green-400"
                         }`}>
                         {data.percentageDiff > 0 ? "↑" : "↓"} {Math.abs(data.percentageDiff).toFixed(1)}%
-                        <span className="text-slate-400 font-normal ml-1">vs 3-month avg</span>
+                        <span className="text-slate-400 font-normal ml-1">vs average</span>
                     </span>
                 </div>
             )}
@@ -94,45 +97,55 @@ function CustomTooltip({
 }
 
 export function BurnRateChart({ data, className }: BurnRateChartProps) {
-    // Process data to calculate percentage differences
+    // Process data to calculate percentage differences and add trend line
     const processedData = useMemo(() => {
-        // Get previous 3 months data (non-current month)
-        const previousMonths = data.filter(d => !d.isCurrentMonth && d.totalSpending !== undefined)
-        const previousAverage = previousMonths.length > 0
-            ? previousMonths.reduce((sum, d) => sum + d.totalSpending, 0) / previousMonths.length
+        if (!data || data.length === 0) return []
+
+        // Calculate average spending across all months
+        const allSpending = data.map(d => d.cumulativeSpending || d.totalSpending || 0)
+        const average = allSpending.length > 0
+            ? allSpending.reduce((sum, v) => sum + v, 0) / allSpending.length
             : 0
 
-        return data.map(item => ({
-            ...item,
-            percentageDiff: previousAverage > 0
-                ? (((item.cumulativeSpending || item.totalSpending) - previousAverage) / previousAverage) * 100
-                : 0,
-            // For bar chart, show total spending only for previous months
-            barSpending: !item.isCurrentMonth ? item.totalSpending : undefined,
-            // For line chart, show cumulative spending only for current month
-            lineSpending: item.isCurrentMonth ? item.cumulativeSpending : undefined,
-        }))
+        return data.map(item => {
+            const spending = item.cumulativeSpending || item.totalSpending || 0
+            return {
+                ...item,
+                // Bar shows monthly spending
+                barSpending: spending,
+                // Trend line connects all points
+                trendValue: spending,
+                // Calculate % difference from average
+                percentageDiff: average > 0
+                    ? ((spending - average) / average) * 100
+                    : 0,
+            }
+        })
     }, [data])
 
-    // Separate data for bars (previous months) and line (current month)
-    const barData = processedData.filter(d => !d.isCurrentMonth)
-    const lineData = processedData.filter(d => d.isCurrentMonth)
-
-    // Combine for composed chart - put bar data first, then line data
-    const chartData = [...barData, ...lineData]
+    if (processedData.length === 0) {
+        return (
+            <div className={`w-full ${className}`}>
+                <div className="mb-4">
+                    <h3 className="text-lg font-semibold text-slate-200">Spending Burn Rate</h3>
+                    <p className="text-sm text-slate-400">No data available for selected date range</p>
+                </div>
+            </div>
+        )
+    }
 
     return (
         <div className={`w-full ${className}`}>
             <div className="mb-4">
                 <h3 className="text-lg font-semibold text-slate-200">Spending Burn Rate</h3>
                 <p className="text-sm text-slate-400">
-                    Previous 3 months vs current month cumulative spending
+                    Monthly spending with trend line
                 </p>
             </div>
 
             <ResponsiveContainer width="100%" height={350}>
                 <ComposedChart
-                    data={chartData}
+                    data={processedData}
                     margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
                 >
                     <CartesianGrid
@@ -157,12 +170,12 @@ export function BurnRateChart({ data, className }: BurnRateChartProps) {
                         wrapperStyle={{ paddingTop: "20px" }}
                         formatter={(value) => (
                             <span className="text-slate-300 text-sm">
-                                {value === "barSpending" ? "Monthly Total" : "Current Month Burn Rate"}
+                                {value === "barSpending" ? "Monthly Spending" : "Spending Trend"}
                             </span>
                         )}
                     />
 
-                    {/* Bar chart for previous 3 months */}
+                    {/* Bar chart for monthly spending */}
                     <Bar
                         dataKey="barSpending"
                         name="barSpending"
@@ -171,50 +184,41 @@ export function BurnRateChart({ data, className }: BurnRateChartProps) {
                         maxBarSize={60}
                     />
 
-                    {/* Line chart for current month burn rate */}
+                    {/* Line chart connecting all months for trend */}
                     <Line
                         type="monotone"
-                        dataKey="lineSpending"
-                        name="lineSpending"
+                        dataKey="trendValue"
+                        name="trendValue"
                         stroke={COLORS.gold}
                         strokeWidth={3}
-                        dot={{ fill: COLORS.gold, strokeWidth: 2, r: 5 }}
-                        activeDot={{ r: 7, fill: COLORS.lightGold }}
+                        dot={{
+                            fill: COLORS.gold,
+                            stroke: COLORS.gold,
+                            strokeWidth: 2,
+                            r: 5,
+                        }}
+                        activeDot={{
+                            fill: COLORS.lightGold,
+                            stroke: COLORS.gold,
+                            strokeWidth: 2,
+                            r: 7,
+                        }}
+                        connectNulls
                     />
                 </ComposedChart>
             </ResponsiveContainer>
 
-            {/* Legend explanation */}
-            <div className="mt-4 flex items-center gap-6 text-xs text-slate-400">
+            {/* Legend description */}
+            <div className="flex items-center justify-center gap-6 mt-2 text-xs text-slate-400">
                 <div className="flex items-center gap-2">
-                    <div
-                        className="w-4 h-3 rounded-sm"
-                        style={{ backgroundColor: COLORS.blue }}
-                    />
-                    <span>Previous months total spending</span>
+                    <div className="w-3 h-3 rounded" style={{ backgroundColor: COLORS.blue }} />
+                    <span>Monthly total spending</span>
                 </div>
                 <div className="flex items-center gap-2">
-                    <div
-                        className="w-4 h-1 rounded"
-                        style={{ backgroundColor: COLORS.gold }}
-                    />
-                    <span>Current month cumulative (burn rate)</span>
+                    <div className="w-6 h-0.5" style={{ backgroundColor: COLORS.gold }} />
+                    <span>Spending trend line</span>
                 </div>
             </div>
         </div>
     )
 }
-
-// Example usage with sample data
-export const sampleBurnRateData: MonthlySpendingData[] = [
-    // Previous 3 months (bar chart data)
-    { month: "Nov", totalSpending: 3200 },
-    { month: "Dec", totalSpending: 4100 },
-    { month: "Jan", totalSpending: 2800 },
-    // Current month cumulative data points (line chart data)
-    { month: "Feb 1", totalSpending: 0, cumulativeSpending: 450, isCurrentMonth: true, day: 1 },
-    { month: "Feb 8", totalSpending: 0, cumulativeSpending: 890, isCurrentMonth: true, day: 8 },
-    { month: "Feb 15", totalSpending: 0, cumulativeSpending: 1650, isCurrentMonth: true, day: 15 },
-    { month: "Feb 22", totalSpending: 0, cumulativeSpending: 2100, isCurrentMonth: true, day: 22 },
-    { month: "Feb 28", totalSpending: 0, cumulativeSpending: 2850, isCurrentMonth: true, day: 28 },
-]
