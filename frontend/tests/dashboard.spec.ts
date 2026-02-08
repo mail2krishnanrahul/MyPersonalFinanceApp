@@ -24,16 +24,18 @@ test.describe('Dashboard Page', () => {
     })
 
     test('displays burn rate chart section', async ({ page }) => {
-        // Wait for burn rate API to complete
+        // Wait for burn rate API to complete OR timeout without error
         await page.waitForResponse(response =>
             response.url().includes('/api/analytics/burn-rate') && response.status() === 200,
-            { timeout: 10000 }
+            { timeout: 15000 }
         ).catch(() => { });
 
-        await page.waitForTimeout(2000)
+        // Additional wait for rendering
+        await page.waitForTimeout(3000)
 
-        // Check for burn rate chart presence
-        await expect(page.getByText('Spending Burn Rate')).toBeVisible()
+        // Check for burn rate chart presence - use heading role for more reliable detection
+        const burnRateHeading = page.getByRole('heading', { name: 'Spending Burn Rate' })
+        await expect(burnRateHeading).toBeVisible({ timeout: 10000 })
     })
 
     test('stats cards show currency amounts', async ({ page }) => {

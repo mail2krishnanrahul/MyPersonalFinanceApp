@@ -36,7 +36,7 @@
       - list [ref=e53]:
         - listitem [ref=e54]:
           - generic [ref=e55]:
-            - generic [ref=e56]: testuser1770585312665@example.com
+            - generic [ref=e56]: testuser1770585725571@example.com
             - button "Logout" [ref=e57]
       - button "Toggle Sidebar" [ref=e58]
     - main [ref=e59]:
