@@ -34,30 +34,32 @@ export default function DashboardPage() {
   })
   const [burnRateData, setBurnRateData] = useState<MonthlySpendingData[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   const fetchDashboardData = useCallback(async () => {
-    if (!dateRange?.from || !dateRange?.to) return
-
     setLoading(true)
-    try {
-      // Fetch all transactions within date range
-      const startDate = format(dateRange.from, "yyyy-MM-dd'T'00:00:00")
-      const endDate = format(dateRange.to, "yyyy-MM-dd'T'23:59:59")
+    setError(null)
 
-      // Fetch transactions (get all for the date range)
+    try {
+      // Fetch all transactions (we'll sum them up)
       const response = await fetch(`/api/transactions?page=0&size=10000`)
-      if (!response.ok) throw new Error('Failed to fetch transactions')
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`)
+      }
 
       const data: PaginatedResponse = await response.json()
-      const transactions = data.content
+      const transactions = data.content || []
 
-      // Filter transactions by date range
-      const filteredTransactions = transactions.filter(t => {
-        const txDate = new Date(t.transactionDate)
-        return txDate >= dateRange.from! && txDate <= dateRange.to!
-      })
+      // Filter by date range if provided
+      let filteredTransactions = transactions
+      if (dateRange?.from && dateRange?.to) {
+        filteredTransactions = transactions.filter(t => {
+          const txDate = new Date(t.transactionDate)
+          return txDate >= dateRange.from! && txDate <= dateRange.to!
+        })
+      }
 
-      // Calculate stats
+      // Calculate stats from transactions
       let income = 0
       let expenses = 0
 
@@ -70,58 +72,59 @@ export default function DashboardPage() {
       })
 
       const savings = income - expenses
+      const totalBalance = savings // Net balance
 
       setStats({
-        totalBalance: income - expenses, // Simplified calculation
+        totalBalance,
         income,
         expenses,
         savings
       })
 
       // Fetch burn rate data
-      const burnRateResponse = await fetch('/api/analytics/burn-rate')
-      if (burnRateResponse.ok) {
-        const burnRateApiData = await burnRateResponse.json()
+      try {
+        const burnRateResponse = await fetch('/api/analytics/burn-rate')
+        if (burnRateResponse.ok) {
+          const burnRateApiData = await burnRateResponse.json()
 
-        // Transform API data to chart format
-        const chartData: MonthlySpendingData[] = burnRateApiData.map((item: any) => ({
-          month: item.monthName.split(' ')[0], // Just get the month abbreviation
-          totalSpending: item.totalSpent,
-          isCurrentMonth: item.currentMonth
-        }))
+          // Transform API data to chart format
+          const previousMonths: MonthlySpendingData[] = burnRateApiData
+            .filter((item: any) => !item.currentMonth)
+            .map((item: any) => ({
+              month: item.monthName.split(' ')[0], // Get month abbreviation
+              totalSpending: Number(item.totalSpent) || 0,
+              isCurrentMonth: false
+            }))
 
-        // Add cumulative data points for current month
-        const currentMonthData = chartData.filter(d => d.isCurrentMonth)
-        const previousMonthsData = chartData.filter(d => !d.isCurrentMonth)
+          // Get current month data
+          const currentMonthItem = burnRateApiData.find((item: any) => item.currentMonth)
 
-        if (currentMonthData.length > 0) {
-          const currentTotal = currentMonthData[0].totalSpending
-          const today = new Date()
-          const dayOfMonth = today.getDate()
+          if (currentMonthItem) {
+            const currentTotal = Number(currentMonthItem.totalSpent) || 0
+            const today = new Date()
+            const dayOfMonth = today.getDate()
+            const monthAbbr = format(today, 'MMM')
 
-          // Create cumulative points for current month
-          const cumulativePoints: MonthlySpendingData[] = []
-          const pointsCount = Math.min(5, dayOfMonth)
+            // Create cumulative points for current month
+            const cumulativePoints: MonthlySpendingData[] = [
+              { month: `${monthAbbr} 1`, totalSpending: 0, cumulativeSpending: Math.round(currentTotal * 0.15), isCurrentMonth: true, day: 1 },
+              { month: `${monthAbbr} ${Math.round(dayOfMonth / 2)}`, totalSpending: 0, cumulativeSpending: Math.round(currentTotal * 0.5), isCurrentMonth: true, day: Math.round(dayOfMonth / 2) },
+              { month: `${monthAbbr} ${dayOfMonth}`, totalSpending: 0, cumulativeSpending: currentTotal, isCurrentMonth: true, day: dayOfMonth },
+            ]
 
-          for (let i = 1; i <= pointsCount; i++) {
-            const day = Math.floor((dayOfMonth / pointsCount) * i)
-            const cumulative = Math.floor((currentTotal / dayOfMonth) * day)
-            cumulativePoints.push({
-              month: `${format(today, 'MMM')} ${day}`,
-              totalSpending: 0,
-              cumulativeSpending: cumulative,
-              isCurrentMonth: true,
-              day
-            })
+            setBurnRateData([...previousMonths, ...cumulativePoints])
+          } else {
+            setBurnRateData(previousMonths)
           }
-
-          setBurnRateData([...previousMonthsData, ...cumulativePoints])
-        } else {
-          setBurnRateData(previousMonthsData)
         }
+      } catch (burnRateError) {
+        console.error('Burn rate fetch error:', burnRateError)
+        // Don't fail the whole dashboard if burn rate fails
       }
-    } catch (error) {
-      console.error('Error fetching dashboard data:', error)
+
+    } catch (err) {
+      console.error('Dashboard fetch error:', err)
+      setError(err instanceof Error ? err.message : 'Failed to load data')
     } finally {
       setLoading(false)
     }
@@ -131,16 +134,23 @@ export default function DashboardPage() {
     fetchDashboardData()
   }, [fetchDashboardData])
 
-  const formatCurrency = (amount: number, showSign = false) => {
-    const formatted = new Intl.NumberFormat('en-US', {
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: 'USD'
-    }).format(Math.abs(amount))
+      currency: 'USD',
+      minimumFractionDigits: 2
+    }).format(amount)
+  }
 
-    if (showSign) {
-      return amount >= 0 ? `+${formatted}` : `-${formatted}`
-    }
-    return formatted
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+          <p className="text-red-500">Error: {error}</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -161,25 +171,25 @@ export default function DashboardPage() {
         <div className="rounded-xl border bg-card p-6 shadow">
           <h3 className="text-sm font-medium text-muted-foreground">Total Balance</h3>
           <p className="text-2xl font-bold">
-            {loading ? "Loading..." : formatCurrency(stats.totalBalance)}
+            {loading ? "..." : formatCurrency(stats.totalBalance)}
           </p>
         </div>
         <div className="rounded-xl border bg-card p-6 shadow">
           <h3 className="text-sm font-medium text-muted-foreground">Income</h3>
           <p className="text-2xl font-bold text-green-600">
-            {loading ? "Loading..." : formatCurrency(stats.income, true)}
+            {loading ? "..." : `+${formatCurrency(stats.income)}`}
           </p>
         </div>
         <div className="rounded-xl border bg-card p-6 shadow">
           <h3 className="text-sm font-medium text-muted-foreground">Expenses</h3>
           <p className="text-2xl font-bold text-red-600">
-            {loading ? "Loading..." : `-${formatCurrency(stats.expenses)}`}
+            {loading ? "..." : `-${formatCurrency(stats.expenses)}`}
           </p>
         </div>
         <div className="rounded-xl border bg-card p-6 shadow">
           <h3 className="text-sm font-medium text-muted-foreground">Savings</h3>
           <p className={`text-2xl font-bold ${stats.savings >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
-            {loading ? "Loading..." : formatCurrency(stats.savings)}
+            {loading ? "..." : formatCurrency(stats.savings)}
           </p>
         </div>
       </div>
@@ -193,7 +203,7 @@ export default function DashboardPage() {
           <BurnRateChart data={burnRateData} />
         ) : (
           <div className="h-[350px] flex items-center justify-center text-slate-400">
-            No data available for the selected period
+            No burn rate data available
           </div>
         )}
       </div>
