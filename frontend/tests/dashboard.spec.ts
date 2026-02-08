@@ -1,7 +1,9 @@
 import { test, expect } from '@playwright/test'
+import { loginTestUser } from './helpers/auth'
 
 test.describe('Dashboard Page', () => {
     test.beforeEach(async ({ page }) => {
+        await loginTestUser(page)
         await page.goto('/dashboard')
     })
 
@@ -97,6 +99,7 @@ test.describe('Dashboard API Integration', () => {
             route.continue()
         })
 
+        await loginTestUser(page)
         await page.goto('/dashboard')
         await page.waitForTimeout(3000)
 
@@ -111,6 +114,7 @@ test.describe('Dashboard API Integration', () => {
             route.continue()
         })
 
+        await loginTestUser(page)
         await page.goto('/dashboard')
         await page.waitForTimeout(3000)
 
@@ -125,6 +129,7 @@ test.describe('Dashboard API Integration', () => {
             route.continue()
         })
 
+        await loginTestUser(page)
         await page.goto('/dashboard')
         await page.waitForTimeout(3000)
 

@@ -1,7 +1,9 @@
 import { test, expect } from '@playwright/test';
+import { loginTestUser } from './helpers/auth';
 
 test.describe('Transaction Table', () => {
     test.beforeEach(async ({ page }) => {
+        await loginTestUser(page);
         await page.goto('/transactions');
     });
 
@@ -76,6 +78,7 @@ test.describe('Transaction Table', () => {
 
 test.describe('Transaction Table - Category Icons', () => {
     test('should display category icons', async ({ page }) => {
+        await loginTestUser(page);
         await page.goto('/transactions');
 
         // Table cells in category column should have icons (svg elements)

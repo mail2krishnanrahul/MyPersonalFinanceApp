@@ -1,7 +1,9 @@
 import { test, expect } from '@playwright/test';
+import { loginTestUser } from './helpers/auth';
 
 test.describe('Sidebar Navigation', () => {
     test('should navigate to Dashboard page', async ({ page }) => {
+        await loginTestUser(page);
         await page.goto('/dashboard');
 
         // Verify page heading
@@ -14,6 +16,7 @@ test.describe('Sidebar Navigation', () => {
     });
 
     test('should navigate to Transactions page via sidebar', async ({ page }) => {
+        await loginTestUser(page);
         await page.goto('/dashboard');
 
         // Click on Transactions link in sidebar
@@ -25,6 +28,7 @@ test.describe('Sidebar Navigation', () => {
     });
 
     test('should navigate to Budgets page via sidebar', async ({ page }) => {
+        await loginTestUser(page);
         await page.goto('/dashboard');
 
         // Click on Budgets link in sidebar
@@ -35,16 +39,17 @@ test.describe('Sidebar Navigation', () => {
         await expect(page.getByRole('heading', { name: 'Budgets' })).toBeVisible();
     });
 
-    test('should redirect root to dashboard', async ({ page }) => {
+    test('should redirect root to login when not authenticated', async ({ page }) => {
         await page.goto('/');
 
-        // Should redirect to dashboard
-        await expect(page).toHaveURL('/dashboard');
+        // Should redirect to login
+        await expect(page).toHaveURL(/.*login/);
     });
 });
 
 test.describe('Date Range Picker', () => {
     test('should display date range picker in header', async ({ page }) => {
+        await loginTestUser(page);
         await page.goto('/dashboard');
 
         // Date range picker button should be visible
@@ -52,6 +57,7 @@ test.describe('Date Range Picker', () => {
     });
 
     test('should open calendar popover when clicked', async ({ page }) => {
+        await loginTestUser(page);
         await page.goto('/dashboard');
 
         // Click on date range picker
