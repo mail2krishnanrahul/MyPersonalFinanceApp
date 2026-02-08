@@ -8,7 +8,8 @@ import {
   Wallet,
 } from "lucide-react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
+import { useAuth } from "@/contexts/AuthContext"
 
 import {
   Sidebar,
@@ -88,15 +89,40 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton size="sm" className="text-xs text-muted-foreground">
-              <span>© 2026 Personal Finance</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
+        <UserSection />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
   )
 }
+
+function UserSection() {
+  const { user, logout } = useAuth()
+  const router = useRouter()
+
+  if (!user) return null
+
+  const handleLogout = () => {
+    logout()
+    router.push('/login')
+  }
+
+  return (
+    <SidebarMenu>
+      <SidebarMenuItem>
+        <div className="flex flex-col gap-2 px-2 py-2">
+          <div className="text-xs text-muted-foreground truncate">
+            {user.email}
+          </div>
+          <button
+            onClick={handleLogout}
+            className="text-xs bg-red-500/10 hover:bg-red-500/20 text-red-400 px-3 py-1.5 rounded transition-colors"
+          >
+            Logout
+          </button>
+        </div>
+      </SidebarMenuItem>
+    </SidebarMenu>
+  )
+}
+

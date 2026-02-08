@@ -14,6 +14,7 @@ import {
 } from "recharts"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { TrendingUp, TrendingDown, Minus } from "lucide-react"
+import { fetchWithAuth } from "@/lib/api-client"
 
 // Burn rate data interface
 interface BurnRateData {
@@ -55,7 +56,7 @@ export function BurnRateChart() {
     const fetchBurnRate = async () => {
         try {
             setLoading(true)
-            const response = await fetch('/api/analytics/burn-rate')
+            const response = await fetchWithAuth('/api/analytics/burn-rate')
             if (!response.ok) {
                 throw new Error('Failed to fetch burn rate data')
             }
@@ -143,8 +144,8 @@ export function BurnRateChart() {
                     </div>
                     {percentage > 0 && (
                         <div className={`text-sm font-medium ${trend === 'up' ? 'text-red-500' :
-                                trend === 'down' ? 'text-green-500' :
-                                    'text-muted-foreground'
+                            trend === 'down' ? 'text-green-500' :
+                                'text-muted-foreground'
                             }`}>
                             {trend === 'up' ? '+' : trend === 'down' ? '-' : ''}
                             {percentage.toFixed(1)}% vs last month

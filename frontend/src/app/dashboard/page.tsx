@@ -4,6 +4,7 @@ import { useDateRange } from "@/contexts/date-range-context"
 import { format } from "date-fns"
 import { BurnRateChart, MonthlySpendingData } from "@/components/charts/burn-rate-chart"
 import { useState, useEffect, useCallback } from "react"
+import { fetchWithAuth } from "@/lib/api-client"
 
 interface DashboardStats {
   totalBalance: number
@@ -42,7 +43,7 @@ export default function DashboardPage() {
 
     try {
       // Fetch all transactions (we'll sum them up)
-      const response = await fetch(`/api/transactions?page=0&size=10000`)
+      const response = await fetchWithAuth(`/api/transactions?page=0&size=10000`)
       if (!response.ok) {
         throw new Error(`API error: ${response.status}`)
       }

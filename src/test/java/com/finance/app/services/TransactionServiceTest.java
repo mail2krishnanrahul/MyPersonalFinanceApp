@@ -55,6 +55,7 @@ class TransactionServiceTest {
         sampleTransaction.setRawDescription("TEST TRANSACTION 123");
         sampleTransaction.setAmount(new BigDecimal("50.00"));
         sampleTransaction.setTransactionDate(LocalDateTime.now());
+        sampleTransaction.setStatus(null); // Force dynamic calculation for tests
     }
 
     @Nested

@@ -10,5 +10,8 @@
 
     <!-- Add status column to transactions -->
     <include file="db/changelog/20260208-2138-add-transaction-status.sql" relativeToChangelogFile="false"/>
+    
+    <!-- Add user auth fields -->
+    <include file="db/changelog/20260208-2215-add-user-auth-fields.sql" relativeToChangelogFile="false"/>
 
 </databaseChangeLog>
